@@ -1,91 +1,53 @@
-
 import cv2
 import numpy as np
-import math
-import keras
-from PIL import Image
+from keras.saving import load_model
+from keras.layers import Softmax
+from keras import Sequential
 import sys
 
+# Ensure the terminal supports UTF-8 encoding
 sys.stdout.reconfigure(encoding='utf-8')
 
-sys.stderr.reconfigure(encoding='utf-8')
+# Load the trained model
+model = load_model("multiselectRemoveHard1736.keras")
+probability_model = Sequential([model, Softmax()])
 
-print(keras.__version__)
+model.summary()
 
-# Load the YOLOv8 model
-
-uniformModel = keras.saving.load_model("multiselectRemoveHard1736.keras")
-
-probability_model = keras.Sequential([uniformModel, 
-                                         keras.layers.Softmax()])
-
-uniformModel.summary()
-
-
-# Open the video file
-video_path = 0 
+# Open the video feed (0 for webcam)
+video_path = 0
 cap = cv2.VideoCapture(video_path)
 
-
-# Loop through the video frames
 while cap.isOpened():
     # Read a frame from the video
     success, frame = cap.read()
 
-    if success:
-
-        resized_image = cv2.resize(frame, (250, 250))
-
-
-        cropped = resized_image.astype("uint8") # "float32")
-
-
-        # cv2.imshow("YOLOv8 Tracking", cropped)
-        
-
-        print(cropped.shape)
-
-        cropped = np.expand_dims(cropped, axis=0)
-
-        print(cropped.shape)
-
-        predictions = probability_model.predict(cropped)# , batch_size=1)
-
-        uniform = np.argmax(predictions)
-
-        prob_text = f"Weed{predictions[0][0]*100:.2f}|Crop{predictions[0][1]*100:.2f}"
-
-        # Choose the text position (just above the top-left corner of the box)
-        text_position = (100, 100)
-        # print(text_position)
-
-        # cv2.putText(frame, prob_text, text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
-        print(predictions)
-
-
-        print(predictions)
-        print(uniform)
-
-        if uniform != 1: 
-            # cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 5)
-            print("Crop: True")
-        elif (uniform <= 0.5):
-            print("Weeeeeed!")        
-        else: 
-            # cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 0, 255), 5)
-            print("Ground")
-
-        # Display the annotated frame
-        # cv2.imshow("YOLOv8 Tracking", frame)
-
-        # Break the loop if 'q' is pressed
-        # if cv2.waitKey(1) & 0xFF == ord("q"):
-        #     break
-    else:
-        # Break the loop if the end of the video is reached
+    if not success:
         break
 
-# Release the video capture object and close the display window
+    # Resize and preprocess the frame
+    resized_image = cv2.resize(frame, (250, 250))
+    cropped = np.expand_dims(resized_image.astype("uint8"), axis=0)
+
+    # Make predictions
+    predictions = probability_model.predict(cropped)
+    class_index = np.argmax(predictions)
+
+    # Interpret predictions
+    prob_text = (
+        f"Weed: {predictions[0][0]*100:.2f}%% | "
+        f"Crop: {predictions[0][1]*100:.2f}%% | "
+        f"Ground: {predictions[0][2]*100:.2f}%%"
+    )
+    print(prob_text)
+
+    if class_index == 1:
+        print("Crop detected")
+    elif class_index == 0:
+        print("Weed detected")
+    else:
+        print("Ground detected")
+
+# Release resources
 cap.release()
 cv2.destroyAllWindows()
