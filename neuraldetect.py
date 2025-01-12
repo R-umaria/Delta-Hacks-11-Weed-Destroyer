@@ -35,15 +35,14 @@ while cap.isOpened():
 
     # Interpret predictions
     prob_text = (
-        f"Weed: {predictions[0][0]*100:.2f}%% | "
-        f"Crop: {predictions[0][1]*100:.2f}%% | "
-        f"Ground: {predictions[0][2]*100:.2f}%%"
+        f"Weed: {predictions[0][1]*100:.2f}%% | "
+        f"Crop: {predictions[0][0]*100:.2f}%% | "
     )
     print(prob_text)
 
-    if class_index == 1:
+    if class_index == 0:
         print("Crop detected")
-    elif class_index == 0:
+    elif class_index == 1:
         print("Weed detected")
     else:
         print("Ground detected")
